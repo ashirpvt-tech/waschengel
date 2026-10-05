@@ -24,7 +24,7 @@ dialog.addEventListener('close',()=>{document.body.classList.remove('no-scroll')
 form.addEventListener('submit',e=>{e.preventDefault();const f=new FormData(form),subject=`Terminanfrage — ${f.get('service')}`,body=`Guten Tag WaschEngel Team,\n\nich interessiere mich für ${f.get('service')}.\nWunschstandort: ${f.get('location')}\n\n${f.get('message')}\n\nMit freundlichen Grüßen\n${f.get('name')}`;window.location.href=`mailto:info@waschengel.de?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;$('#form-note').textContent='Ihre E-Mail ist vorbereitet. Bitte senden Sie diese in Ihrem E-Mail-Programm. Falls sich kein Programm öffnet, rufen Sie uns unter 09131 1239258 an. Es wurde noch kein Termin gebucht.'});
 $('#year').textContent=new Date().getFullYear();
 let ticking=false;
-function updateChrome(){const y=scrollY,travel=document.documentElement.scrollHeight-innerHeight;$('.header').classList.toggle('scrolled',y>100);$('.header').classList.toggle('light-header',y<$('.partners').offsetTop-90);$('.progress').style.width=`${travel?y/travel*100:0}%`;ticking=false;}
+function updateChrome(){const y=scrollY,travel=document.documentElement.scrollHeight-innerHeight;$('.header').classList.toggle('scrolled',y>100);$('.progress').style.width=`${travel?y/travel*100:0}%`;ticking=false;}
 addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(updateChrome);ticking=true}},{passive:true});updateChrome();
 // GSAP only enhances existing readable content. Sticky scenes stay in native document flow.
 if(window.gsap&&window.ScrollTrigger&&!reduce){
@@ -46,7 +46,9 @@ if(window.gsap&&window.ScrollTrigger&&!reduce){
  const sky=gsap.timeline({scrollTrigger:{trigger:'.sky-transition',start:'top top',end:'bottom bottom',scrub:1.1}});
  sky.to('.road-layer',{scale:1.18,xPercent:-10,opacity:0,duration:.6},0).to('.sky-layer',{opacity:1,scale:1,duration:.7},.15).fromTo('.transition-copy p',{scale:.9},{scale:1.06,duration:1},0).to('.transition-copy .eyebrow',{y:-15,duration:1},0);
  gsap.fromTo('.closing>img',{scale:1.08},{scale:1,opacity:.18,ease:'none',scrollTrigger:{trigger:'.closing',start:'top bottom',end:'bottom top',scrub:1}});
-
+ mm.add('(min-width:0px)',()=>{
+  gsap.to('.collection-track',{x:()=>-($('.collection-track').scrollWidth-$('.collection-stage').clientWidth),ease:'none',scrollTrigger:{trigger:'.collection-scroll',start:'top top',end:'bottom bottom',scrub:.8,invalidateOnRefresh:true,onUpdate:s=>gsap.set('.collection-pagination i',{scaleX:Math.max(.06,s.progress)})}});
+ });
  const flight=gsap.timeline({scrollTrigger:{trigger:'.flight-story',start:'top top',end:'bottom bottom',scrub:1,invalidateOnRefresh:true,onUpdate:s=>{
   const n=s.progress<.35?0:s.progress<.72?1:2;
   $('.flight-step').textContent=['01 / VORBEREITUNG','02 / ABFLUG','03 / NEUE HORIZONTE'][n];
@@ -65,3 +67,15 @@ $('.service-stage').addEventListener('touchstart',e=>{if(e.touches.length===1)to
 $('.service-stage').addEventListener('touchend',e=>{if(!touchStart||innerWidth>700)return;const dx=e.changedTouches[0].clientX-touchStart.x,dy=e.changedTouches[0].clientY-touchStart.y;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.5)$$('[data-service]')[(active+(dx<0?1:4))%5].click();touchStart=null},{passive:true});
 $('.service-controls').addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const i=e.key==='Home'?0:e.key==='End'?4:(active+(e.key==='ArrowRight'?1:4))%5;$$('[data-service]')[i].focus();$$('[data-service]')[i].click()});
 
+// Horizontal flicks advance the same scroll timeline; vertical swipes stay native.
+let collectionTouch=null;
+$('.collection-stage').addEventListener('touchstart',e=>{if(e.touches.length===1)collectionTouch={x:e.touches[0].clientX,y:e.touches[0].clientY}},{passive:true});
+$('.collection-stage').addEventListener('touchend',e=>{
+ if(!collectionTouch)return;
+ const start=collectionTouch;collectionTouch=null;
+ if(!document.documentElement.classList.contains('scroll-motion')||innerWidth>700)return;
+ const dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;
+ if(Math.abs(dx)<50||Math.abs(dx)<Math.abs(dy)*1.5)return;
+ const section=$('.collection-scroll'),top=section.getBoundingClientRect().top+scrollY,travel=section.offsetHeight-innerHeight;
+ window.scrollTo({top:Math.min(top+travel,Math.max(top,scrollY+(dx<0?1:-1)*travel/2)),behavior:'smooth'});
+},{passive:true});
